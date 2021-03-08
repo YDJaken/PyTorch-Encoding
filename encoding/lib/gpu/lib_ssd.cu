@@ -113,9 +113,9 @@ void reduce_val_idx(int N, volatile float *vals, volatile int *idx) {
  **/
 template <int BLOCK_SIZE, int MAX_BBOXES_PER_BLOCK>
 __global__
-void encode(const int N_img, const float4 *bbox_in, const long *labels_in, const int *offsets,
+void encode(const int N_img, const float4 *bbox_in, const int64_t*labels_in, const int *offsets,
             const int M, const float4 *dboxes, // const float *ious,
-            const float criteria, uint8_t *workspace, float4 *bbox_out, long *label_out) {
+            const float criteria, uint8_t *workspace, float4 *bbox_out, int64_t*label_out) {
 
   // Each block will take a single image's IoU set
   const int img = blockIdx.x;
@@ -375,7 +375,7 @@ std::vector<at::Tensor> box_encoder(const int N_img,
 #ifdef DEBUG
   printf("%d x %d\n", N_img * M, 4);
   // at::Tensor bbox_out = dbox.scalar_type().tensor({N_img * M, 4});
-  printf("allocating %lu bytes for output labels\n", N_img*M*sizeof(long));
+  printf("allocating %lu bytes for output labels\n", N_img*M*sizeof(int64_t));
 #endif
   at::Tensor labels_out = at::empty({N_img * M}, labels_input.options());
   THCudaCheck(cudaGetLastError());
@@ -399,14 +399,14 @@ std::vector<at::Tensor> box_encoder(const int N_img,
   const int THREADS_PER_BLOCK = 256;
   encode<THREADS_PER_BLOCK, 256><<<N_img, THREADS_PER_BLOCK, 0, stream.stream()>>>(N_img,
                       (float4*)bbox_input.data_ptr<float>(),
-                      labels_input.data_ptr<long>(),
+                      labels_input.data_ptr<int64_t>(),
                       bbox_offsets.data_ptr<int>(),
                       M,
                       (float4*)dbox.data_ptr<float>(),
                       criteria,
                       workspace.data_ptr<uint8_t>(),
                       (float4*)bbox_out.data_ptr<float>(),
-                      labels_out.data_ptr<long>());
+                      labels_out.data_ptr<int64_t>());
 
   THCudaCheck(cudaGetLastError());
   return {bbox_out, labels_out};

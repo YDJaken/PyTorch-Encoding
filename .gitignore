@@ -11,3 +11,5 @@ encoding.egg-info/
 *.o
 *.so
 *.ninja*
+dist/
+*.egg-info
